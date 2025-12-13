@@ -3,7 +3,7 @@ import pandas as pd
 from math import comb
 import xgboost as xgb
 # ============================================================
-# 0) DGP: high-dim PLM (你的版本，基本不动)
+# 0) DGP: high-dim PLM 
 # ============================================================
 def generate_plm_highdim_20(n=20000, theta=1.0, rho=0.5, seed=None):
     rng = np.random.default_rng(seed)
@@ -46,7 +46,7 @@ def generate_plm_highdim_20(n=20000, theta=1.0, rho=0.5, seed=None):
 
 
 # ============================================================
-# 1) 手写 OLS: (X'X)^{-1}X'y / lstsq
+# 1) 手写 OLS
 # ============================================================
 def add_intercept(X):
     return np.column_stack([np.ones(X.shape[0]), X])
@@ -65,7 +65,7 @@ def ols_slope_with_intercept(y, d):
 
 
 # ============================================================
-# 2) 手写 1D Nadaraya–Watson 核回归（高斯核）
+# 2) 1D Nadaraya–Watson 核回归（高斯核）
 #    同一套权重同时算 E[Y|Z], E[D|Z], E[W|Z]
 # ============================================================
 def silverman_bw(z):
@@ -97,7 +97,7 @@ def kernel_conditional_means_1d(Z, Y, D, W, h=None):
 
     for i in range(n):
         u = (Z - Z[i]) / h
-        w = np.exp(-0.5 * u * u)   # 高斯核(常数项可省略)
+        w = np.exp(-0.5 * u * u)   # 高斯核
         den = w.sum()
         if den < 1e-12:
             # 极端情况兜底：用全局均值
@@ -113,7 +113,7 @@ def kernel_conditional_means_1d(Z, Y, D, W, h=None):
 
 
 # ============================================================
-# 3) 手写 Robinson kernel partialling-out
+# 3)  Robinson kernel partialling-out
 # ============================================================
 def est_robinson_kernel_20_manual(df, h=None):
     Z = df["X1"].to_numpy()
@@ -133,7 +133,7 @@ def est_robinson_kernel_20_manual(df, h=None):
 
 
 # ============================================================
-# 4) 手写 Series / Speckman：多项式基 + OLS
+# 4)  Series / Speckman：多项式基 + OLS
 # ============================================================
 def poly_basis_1d(z, degree):
     z = np.asarray(z).reshape(-1, 1)
@@ -153,7 +153,7 @@ def est_series_20_manual(df, degree=5):
 
 
 # ============================================================
-# 5) 手写 k 阶差分（你给的版本）
+# 5)  k 阶差分（你给的版本）
 # ============================================================
 def k_order_diff(arr, k):
     n = len(arr)
@@ -178,7 +178,7 @@ def est_diff_20_manual(df, k=2):
 
 
 # ============================================================
-# 6) 手写 Lasso（坐标下降）+ 手写 CV 选 lambda
+# 6)  Lasso（坐标下降）+ 手写 CV 选 lambda
 # ============================================================
 def standardize_fit(X):
     mu = X.mean(axis=0)
@@ -199,7 +199,7 @@ def soft_threshold(x, lam):
 def lasso_cd_fit(X, y, lam, max_iter=2000, tol=1e-6):
     """
     min (1/2n)||y - a - Xb||^2 + lam * ||b||_1
-    - 我们用：先标准化 X（列均值0方差1），中心化 y
+    - 先标准化 X（列均值0方差1），中心化 y
     - 坐标下降更新 b
     """
     X = np.asarray(X)
@@ -253,7 +253,7 @@ def make_kfold_indices(n, K, seed=0):
 
 def lasso_cv_choose_lambda(X, y, K=5, n_lams=40, min_ratio=1e-3, seed=0):
     """
-    手写 CV：在一条 lambda path 上选使验证 MSE 最小的 lambda
+     CV：在一条 lambda path 上选使验证 MSE 最小的 lambda
     """
     X = np.asarray(X)
     y = np.asarray(y).reshape(-1)
@@ -291,7 +291,7 @@ def lasso_cv_choose_lambda(X, y, K=5, n_lams=40, min_ratio=1e-3, seed=0):
 
 
 # ============================================================
-# 7) 手写 DML (PLR) + cross-fitting + Lasso nuisance
+# 7)  DML (PLR) + cross-fitting + Lasso nuisance
 # ============================================================
 def est_dml_20_manual(df, K=5, seed=42,
                       n_lams=40, min_ratio=1e-3,
@@ -314,7 +314,7 @@ def est_dml_20_manual(df, K=5, seed=42,
 
     folds = make_kfold_indices(n, K, seed=seed)
 
-    # ===== 原先 Lasso 选 lambda（全部注释掉）=====
+    # ===== 原先 Lasso =====
     # if not tune_each_fold:
     #     lam_y = lasso_cv_choose_lambda(X, Y, K=5, n_lams=n_lams, min_ratio=min_ratio, seed=seed+1)
     #     lam_d = lasso_cv_choose_lambda(X, D, K=5, n_lams=n_lams, min_ratio=min_ratio, seed=seed+2)
@@ -345,12 +345,12 @@ def est_dml_20_manual(df, K=5, seed=42,
         Xtr, Ytr, Dtr = X[train_idx], Y[train_idx], D[train_idx]
         Xte = X[test_idx]
 
-        # ===== 原先每折 tune lambda（注释掉）=====
+        # =====  tune lambda =====
         # if tune_each_fold:
         #     lam_y = lasso_cv_choose_lambda(Xtr, Ytr, K=5, n_lams=n_lams, min_ratio=min_ratio, seed=seed+10+k)
         #     lam_d = lasso_cv_choose_lambda(Xtr, Dtr, K=5, n_lams=n_lams, min_ratio=min_ratio, seed=seed+20+k)
 
-        # ===== 原先 Lasso 拟合（注释掉）=====
+        # =====  Lasso 拟合 =====
         # ay, by = lasso_cd_fit(Xtr, Ytr, lam=lam_y)
         # ad, bd = lasso_cd_fit(Xtr, Dtr, lam=lam_d)
         # y_hat[test_idx] = ay + Xte @ by
@@ -384,7 +384,7 @@ def est_dml_20_manual(df, K=5, seed=42,
 
 
 # ============================================================
-# 8) Monte Carlo：四种方法手写版
+# 8) Monte Carlo
 # ============================================================
 def mc_once_20(n=2000, theta0=1.0, seed=0):
     df = generate_plm_highdim_20(n=n, theta=theta0, seed=seed)
@@ -422,7 +422,7 @@ def run_mc(R=100, n=2000, theta0=1.0, seed0=123):
 
 
 # ============================================================
-# 9) 示例运行
+# 9) 运行
 # ============================================================
 if __name__ == "__main__":
     theta0 = 1.0
