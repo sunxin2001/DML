@@ -57,9 +57,6 @@ def generate_pliv_data_dml_win(
     return pd.DataFrame(cols)
 
 
-# ============================================================
-# 2) Helpers: NW kernel regression for 1D X1
-# ============================================================
 def _silverman_bandwidth(x):
     x = np.asarray(x).reshape(-1)
     n = x.size
